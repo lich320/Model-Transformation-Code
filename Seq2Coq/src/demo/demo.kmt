@@ -1,0 +1,33 @@
+/* $Id:$ 
+ * Creation : June 7, 2013
+ * Copyright: ECNU 
+ * Function ：转换示例
+ * Author   : lich  
+ * Editor   : ldou
+ */
+ 
+@mainClass "demo::Main"
+@mainOperation "main"
+
+package demo;
+   
+require "platform:/resource/Seq2Coq/src/persistence/PersistentSeq.kmt"
+require "platform:/resource/Seq2Coq/src/transform/Seq2Coq.kmt"
+require kermeta
+ 
+using Seq  
+using kermeta::standard
+using kermeta::io
+
+class Main
+{
+	operation main() : Void is do 
+		//load model
+		var seq1: SeqModel init SeqModel.new.load("platform:/resource/Seq2Coq/model/Example.xmi")
+		var outCoq:String init seq1.toCoq()
+	//output result to Result.v
+	    FileIO.new.writeTextFile("platform:/resource/Seq2Coq/result/Result.v",outCoq)
+	    stdio.writeln("Coq outPut :"+"\n" +outCoq)
+	end
+	
+}

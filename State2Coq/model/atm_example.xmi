@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="ASCII"?>
+<state:StateModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:state="http://state/1.0" xsi:schemaLocation="http://state/1.0 ../metamodel/state.ecore">
+  <packagedElment xsi:type="state:StateMachine">
+    <region name="r0">
+      <subVertex xsi:type="state:State" name="ATMServer">
+        <region name="r1">
+          <subVertex xsi:type="state:State" name="Execute">
+            <region name="r3">
+              <subVertex xsi:type="state:State" name="Identify">
+                <region name="ddd">
+                  <subVertex xsi:type="state:State" name="CardIn" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0"/>
+                  <subVertex xsi:type="state:State" name="InputPwd" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.1 //@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.2" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0 //@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.2"/>
+                  <subVertex xsi:type="state:PseudoState" name="history" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0" kind="shallow"/>
+                  <transition name="t1" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1">
+                    <trigger>
+                      <event body="insertCard"/>
+                    </trigger>
+                  </transition>
+                  <transition name="t2" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1">
+                    <trigger>
+                      <event body="pwd"/>
+                    </trigger>
+                    <guard>
+                      <specification body="checkPwd==1"/>
+                    </guard>
+                    <effect body="eloginsucc" language=""/>
+                  </transition>
+                  <transition name="t3" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1">
+                    <trigger name="" id="">
+                      <event body="pwd"/>
+                    </trigger>
+                    <guard>
+                      <specification body="!checkPwd==1"/>
+                    </guard>
+                    <effect body="loginFail" language=""/>
+                  </transition>
+                </region>
+                <exit body="exlogin"/>
+              </subVertex>
+              <subVertex xsi:type="state:State" name="Accept" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.1">
+                <entry body="command"/>
+              </subVertex>
+              <transition name="t4" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.2">
+                <trigger>
+                  <event body="withdraw"/>
+                </trigger>
+                <guard>
+                  <specification body="balance>0"/>
+                </guard>
+              </transition>
+            </region>
+          </subVertex>
+        </region>
+        <region name="r2">
+          <subVertex xsi:type="state:State" name="Log">
+            <region name="r4">
+              <subVertex xsi:type="state:State" name="Wait" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@transition.0"/>
+              <subVertex xsi:type="state:State" name="Write" incoming="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@transition.0"/>
+              <transition name="t5" source="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@subVertex.0" target="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@subVertex.1">
+                <trigger>
+                  <event body="insertCard"/>
+                </trigger>
+              </transition>
+            </region>
+          </subVertex>
+        </region>
+      </subVertex>
+    </region>
+  </packagedElment>
+</state:StateModel>

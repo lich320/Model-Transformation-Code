@@ -1,0 +1,39 @@
+/* $Id:$ 
+ * Creation : 14 5, 2014
+ * Copyright: ECNU 
+ * Function ：转换示例
+ * Author   : lich  
+ * Editor   : ldou
+ */
+@mainClass "demo::Main"
+@mainOperation "main"
+ 
+package demo;
+require "platform:/resource/State2Coq/src/persistence/PersistenceState.kmt"
+require "platform:/resource/State2Coq/src/transform/State2Coq.kmt"
+require "platform:/resource/State2Coq/src/interpretor/GuardInterpretor.kmt"
+require  kermeta
+
+using state
+using kermeta::standard   
+using kermeta::io
+using kermeta::utils
+using interpretor
+ 
+class Main
+{
+	operation main() : Void is do 	
+	
+		//加载模型
+		var stateModel : StateModel init StateModel.new.load("platform:/resource/State2Coq/model/atm_example.xmi")
+		//调用转换操作
+		var outCoq : String init stateModel.toCoq()
+		//转换结果输出到Result.v
+	    FileIO.new.writeTextFile("platform:/resource/State2Coq/result/Result.v", outCoq)
+	    //控制台输出
+	    stdio.writeln("The result is : " + "\n" + outCoq)
+	    
+	end 
+
+	
+}

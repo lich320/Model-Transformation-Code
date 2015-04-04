@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="ASCII"?>
+<Seq:SeqModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:Seq="http://seq/1.0"
+	xsi:schemaLocation="http://seq/1.0 ../metamodel/Seq.ecore">
+	<package1 xsi:type="Seq:Package" name="package1">
+		<package2 xsi:type="Seq:Colloboration" name="collo1">
+			<ownedBehaviour name="interaction1">
+				<lifeline name="line1"
+					coveredBy="//@package1/@package2/@ownedBehaviour/@fragment.4 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.0 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.4" />
+				<lifeline name="line2"
+					coveredBy="//@package1/@package2/@ownedBehaviour/@fragment.1 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.0/@operand.0/@fragments.0 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.1" />
+				<lifeline name="line3" id=""
+					coveredBy="//@package1/@package2/@ownedBehaviour/@fragment.0 //@package1/@package2/@ownedBehaviour/@fragment.3 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.1 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.0/@operand.0/@fragments.1 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.2 //@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.3" />
+				<fragment xsi:type="Seq:OcurrenceSpecification" name="sMess1"
+					covered="//@package1/@package2/@ownedBehaviour/@lifeline.2"
+					message="//@package1/@package2/@ownedBehaviour/@message.0" />
+				<fragment xsi:type="Seq:OcurrenceSpecification" name="rMess1"
+					covered="//@package1/@package2/@ownedBehaviour/@lifeline.1"
+					message="//@package1/@package2/@ownedBehaviour/@message.0" />
+				<fragment xsi:type="Seq:CombinedFragment" name="combie1">
+					<operand>
+						<fragments xsi:type="Seq:OcurrenceSpecification" name="sMess2"
+							covered="//@package1/@package2/@ownedBehaviour/@lifeline.0"
+							message="//@package1/@package2/@ownedBehaviour/@message.1" />
+						<fragments xsi:type="Seq:OcurrenceSpecification" name="rMess2"
+							id="" covered="//@package1/@package2/@ownedBehaviour/@lifeline.2"
+							message="//@package1/@package2/@ownedBehaviour/@message.1" />
+						<fragments xsi:type="Seq:CombinedFragment" name="c2"
+							interctionOperator="par">
+							<operand>
+								<fragments xsi:type="Seq:CombinedFragment" name="c3"
+									interctionOperator="opt">
+									<operand>
+										<fragments xsi:type="Seq:OcurrenceSpecification"
+											name="sMess3" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1"
+											message="//@package1/@package2/@ownedBehaviour/@message.2" />
+										<fragments xsi:type="Seq:OcurrenceSpecification"
+											name="rMess3" id=""
+											covered="//@package1/@package2/@ownedBehaviour/@lifeline.2"
+											message="//@package1/@package2/@ownedBehaviour/@message.2" />
+									</operand>
+								</fragments>
+								<fragments xsi:type="Seq:OcurrenceSpecification" name="sMees4"
+									id="" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1"
+									message="//@package1/@package2/@ownedBehaviour/@message.3" />
+								<fragments xsi:type="Seq:OcurrenceSpecification" name="rMess4"
+									covered="//@package1/@package2/@ownedBehaviour/@lifeline.2"
+									message="//@package1/@package2/@ownedBehaviour/@message.3" />
+								<fragments xsi:type="Seq:OcurrenceSpecification" name="sMess5"
+									id="" covered="//@package1/@package2/@ownedBehaviour/@lifeline.2"
+									message="//@package1/@package2/@ownedBehaviour/@message.4" />
+								<fragments xsi:type="Seq:OcurrenceSpecification" name="rMess5"
+									covered="//@package1/@package2/@ownedBehaviour/@lifeline.0"
+									message="//@package1/@package2/@ownedBehaviour/@message.4" />
+							</operand>
+						</fragments>
+					</operand>
+				</fragment>
+				<fragment xsi:type="Seq:OcurrenceSpecification" name="sMess6"
+					covered="//@package1/@package2/@ownedBehaviour/@lifeline.2"
+					message="//@package1/@package2/@ownedBehaviour/@message.5" />
+				<fragment xsi:type="Seq:OcurrenceSpecification" name="rMess6"
+					covered="//@package1/@package2/@ownedBehaviour/@lifeline.0"
+					message="//@package1/@package2/@ownedBehaviour/@message.5" />
+				<message name="Mess1"
+					sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.0"
+					receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.1" />
+				<message name="Mess2"
+					sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.0"
+					receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.1" />
+				<message name="Mess3"
+					sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.0/@operand.0/@fragments.0"
+					receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.0/@operand.0/@fragments.1" />
+				<message name="Mess4"
+					sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.1"
+					receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.2" />
+				<message name="Mess5"
+					sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.3"
+					receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.2/@operand.0/@fragments.2/@operand.0/@fragments.4" />
+				<message name="Mess6"
+					sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.3"
+					receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.4" />
+			</ownedBehaviour>
+		</package2>
+	</package1>
+</Seq:SeqModel>

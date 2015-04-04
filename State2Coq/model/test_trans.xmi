@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="ASCII"?>
+<state:StateModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:state="http://state/1.0" xsi:schemaLocation="http://state/1.0 ../metamodel/state.ecore">
+  <packagedElment xsi:type="state:StateMachine">
+    <region>
+      <subVertex xsi:type="state:State" name="s1">
+        <region>
+          <subVertex xsi:type="state:State" name="s2" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@transition.0"/>
+          <subVertex xsi:type="state:State" name="s3">
+            <region>
+              <subVertex xsi:type="state:State" name="s4">
+                <region name="">
+                  <subVertex xsi:type="state:State" name="s5" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@transition.0"/>
+                </region>
+              </subVertex>
+            </region>
+          </subVertex>
+          <transition name="tr1" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.1/@region.0/@subVertex.0/@region.0/@subVertex.0">
+            <trigger name="e1" id="">
+              <event body="e2"/>
+            </trigger>
+            <guard>
+              <specification body="a+b>3"/>
+            </guard>
+            <effect body="jkjf"/>
+          </transition>
+        </region>
+      </subVertex>
+    </region>
+  </packagedElment>
+</state:StateModel>

@@ -1,0 +1,389 @@
+/* $Id:$ 
+ * Creation : 14 5, 2014
+ * Copyright: ECNU 
+ * Function ：卫式条件的解释器
+ * Author   : lich  
+ * Editor   : ldou
+ */
+
+
+package interpretor;
+require kermeta 
+using kermeta::standard
+using kermeta::persistence
+using kermeta::io
+using kermeta::utils
+
+/*   
+ * 利用栈，进行四则运算的类  
+ * 用两个栈来实现算符优先，一个栈用来保存需要计算的数据numStack，一个用来保存计算优先符opStack   
+ * 基本算法实现思路为：用当前取得的运算符与opStack栈顶运算符比较优先级：   
+ * 若高于，则因为会先运算，放入栈顶；
+ * 若等于，因为出现在后面，所以会后计算，所以栈顶元素出栈，取出操作数运算；
+ * 若小于，则同理，取出栈顶元素运算，将结果入操作数栈
+ * 优先级为：'(' > '*' = '/' > '+' = '-' > ')' >  '>' = '<'  =  '='  > '&&'='||' > '#'
+ *    
+ */      
+
+class Calculator 
+{	reference expression : Expression  
+	attribute hash : Hashtable<String,String> 
+	attribute expArray : seq String[0..*]
+	attribute opStack : Stack<String>
+	attribute preHash : Hashtable<String,Integer> 
+	attribute dataStack : Stack<Expression>
+	attribute ultSet : String //终止符集合
+	attribute opSet : String //支持的运算符集合
+	operation initialize(expStr : String) : String is do	
+		
+		var s : String
+		var s1 : String init ""
+		var i : Integer
+		var left : Expression
+		var right : Expression
+		var numStr : String init "0123456789"
+		var alpSet : String init "abcdefghigklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"		
+
+		opSet := "<>==-+&&||*/()!#"
+		ultSet := "<==>&&||"
+
+		//数据栈和操作符栈
+	    dataStack := Stack<Expression>.new
+		opStack := Stack<String>.new
+		//获得运算符hash表
+		hash := getHashtable()		
+		//获得表达式数组，并加入一个终止符#
+		expArray.addAll(getExpArray(expStr,alpSet,opSet,numStr))
+		expArray.add("#")
+		
+		//获得从0开始的exArray中表达式的表达式对象
+		 expression := getExpression(0)
+		
+		//清空表达式数组，供另一个表达式使用
+		 expArray.clear()
+		
+		result :=  expression.interpreter(hash)
+		//result := ""
+	end
+	
+   /*
+   	设置支持的运算符及对应的Coq形式
+   */
+   operation getHashtable() : Hashtable<String,String> is do
+		var hash1 : Hashtable<String,String> init Hashtable<String,String>.new
+		hash1.put("+", "APlus")
+		hash1.put("-", "AMinus")
+		hash1.put("*", "AMult")
+		hash1.put("==", "BEq")
+		hash1.put("<", "BLe")
+		hash1.put(">", "BGt")
+		hash1.put("&&", "BAnd")
+		hash1.put("||", "BOr")
+		hash1.put("!", "BNot")
+		result := hash1
+	end
+
+	
+	//获取Expression
+	/*如果是一个hash表中考虑的运算符，则判断当前的运算符s与opStack栈顶的运算符s1的各种情况
+	 *  s < s1      从opStack中退出一个运算符，从操作数栈中退出两个运算数，进行运算，结果放入操作数栈
+	 *  s == s1  操作符退栈，消去
+	 *  s > s1  s入opStack，读下一个字符
+	 */
+	operation getExpression(low : Integer) : Expression is do 
+		var exp : Expression
+		var i : Integer
+		var s : String
+		var s1 : String //opStack栈顶元素
+		var left : Expression
+		var right : Expression
+		//用#初始化opStack作为终止操作符，优先级最低，最后输出
+		from i := low
+		until i > expArray.size() - 1
+		loop
+			s := expArray.at(i)
+			if(s == "#") then
+				 opStack.push(s)				
+				 i := expArray.size()
+			end
+			i := i + 1	
+		end		
+		//考虑加减乘除时的算法
+		    var j : Integer init low
+			from s := expArray.at(j)//当前的元素
+			until s == "#" and opStack.peek() == "#"
+			loop
+			   if(opSet.contains(s))then //判断s是否为操作符，若是，则s与op栈顶元素s1比较优先级
+			   	  	//获取op栈顶元素
+			   	  	if(opStack.size() != 0)then
+			   	    	 s1 := opStack.peek()			   	  		 
+			   	  	end
+			   	  	//判断栈顶s1与当前操作符s的优先级
+			   	  	var opChar:String init compare(s1, s)
+			   	  		 //stdio.writeln("Comp res:" + opChar)
+			   	  	//当栈顶元素小于当前操作符s时，s入栈，读下一个字符
+			   	  	
+			     	 if(opChar == "<")then
+			   	 			opStack.push(s)
+			   	 			j := j + 1
+			   	 			s := expArray.at(j)
+			   	  	 else //等于时，说明遇到了右括号，要pop出opStack栈顶的
+			   	   	 	if(opChar == "=")then
+			   	   	 	    opStack.pop()
+			   	   	 		j := j + 1
+			   	   	 		s := expArray.at(j)
+			   	   	 	 else //大于时，说明栈顶的元素先执行。从栈顶取出一个字符，然后再从dataStack中取出2个操作数。运算结果存入dataStack
+			   	   	 	   //并不读下一个字符，而是继续读栈顶的元素，比较栈顶元素与当前元素s的优先级
+			   	   	     	if(opChar == ">")then
+			   	   	     		if(s1=="!")then
+			   	   	     			right := dataStack.pop()
+			   	   	     			 left := EmptyExpression.new.initialize()
+			   	   	     				if(not opStack.peek().isVoid())then
+			   	 		 				s1 := opStack.pop()
+			   	 		 			end
+			   	   	     			dataStack.push(UnaryExpression.new.initialize(left,right,s1))
+			   	   	     		else
+			   	   	     			right := dataStack.pop()
+			   	 		 			left := dataStack.pop()
+			   	 		 			if(not opStack.peek().isVoid())then
+			   	 		 				s1 := opStack.pop()
+			   	 		 			end
+			   	 		 			dataStack.push(BinaryExpression.new.initialize(left, right, s1))
+			   	   	     		end
+			   	   	     		
+			   	 		 	
+			   	 		 	end
+			   	 	 	 end
+			   	  	end   	
+			    else				   
+			    	//stdio.writeln("dataVar: " + s)
+			       dataStack.push(VarExpression.new.initialize(s))
+			       j := j + 1
+			       s := expArray.at(j)
+				end
+			end	
+		result := dataStack.pop()
+	end
+	
+	/*  
+     * 比较当前操作符与栈顶元素操作符优先级，如果比栈顶元素优先级高，则返回true，否则返回false   
+     * 
+     * @param  s1为栈顶元素，s2为当前的元素
+     * @return 比较结果，true代表比栈顶元素优先级高，false代表比栈顶元素优先级低   
+     */      
+	operation compare(s1 : String, s2 : String) : String is do 
+			if(s1 == "+" or s1 == "-") then
+				if(s2 == "+" or s2 == "-" or s2 == ")" or s2 == "#" or ultSet.contains(s2))then
+					result := ">"
+				else 
+				   result := "<"
+				end	
+			end
+		    if(s1 == "*" or s1 == "/")then
+		    	if(s2 == "(") then
+		    	   result := "<"	
+		    	else
+		    	   result := ">"
+		    	end
+		    end
+			if(s1 == "(") then
+					if(s2==")") then
+						result := "="
+				    else
+				     	result := "<"
+				    end				    
+			end
+		    if(s1 == ")") then
+					if(s2 == "(") then
+						result := "error"
+				    else
+				     	result := ">"
+				    end
+			end
+			//>的优先级高于# < > && || !
+			if(s1 == ">" or s1 == "<" or s1 =="==") then
+				  if(s2 == "#" or s2 == ">" or s2 == "==" or s2 == "<" or s2 == "&&" or s2 == "||" or s2 == ")" or s2 == "!") then
+				  	 result := ">"
+				  else
+				  	 result := "<"
+				  end			
+			end
+			// 逻辑与或优先级只高于#
+			if(s1 == "&&" or s1 == "||") then
+				 if(s2 == "#" or s2 == "&&" or s2 == "||") then
+				        result := ">"
+				 else
+				 		result := "<"
+				 end
+			end
+	       // 逻辑非的优先级大于&& || )，小于<>
+			if(s1 == "!") then
+				if(s2 == "&&" or s2 == "||" or s2 == ")"or s2=="#"or s2 == "!") then
+					 result := ">"
+				else
+				     result := "<"
+				end
+			
+			end
+			
+			if(s1 == "#") then
+				 if(s2 == "#") then
+				 	 result := "="
+				 else
+				     result := "<"
+				 end
+			
+			end 
+
+	end
+
+	//将表达式转换为字符串数组
+	operation getExpArray(expStr : String, alpSet : String, opSet : String, numSet : String) : seq String[0..*] is do
+		var ExpArray : seq String[0..*] init kermeta::standard::Sequence<String>.new
+		var s : String
+		var s1 : String init ""
+		var varStr:String init""
+		var i : Integer		
+		//stdio.writeln("expStr: " + expStr)
+		from i := 0
+		until i > expStr.size() - 1
+		loop
+				s := expStr.elementAt(i).toString()
+
+			if((alpSet.contains(s))or(opSet.contains(s)))then	
+				if(s == "&" or s == "|" or s == "=")then
+					//每个操作符加入ExpArray前，先加入他之前的那个操作数。
+					if(not (varStr ==""))then
+						ExpArray.add(varStr)
+					 end
+					varStr := ""
+					i := i+1
+				    ExpArray.add(s + s)
+				else 
+					if(alpSet.contains(s))then//将变量字符粘合为字符串。
+						varStr := varStr + s
+					else
+					//stdio.writeln("ddd:" + varStr+ "  op: " + s)
+						if(not (varStr ==""))then
+							ExpArray.add(varStr)
+						end
+						varStr := ""
+						ExpArray.add(s)
+					end
+				end
+			else
+				if(numSet.contains(s))then
+					from s := expStr.elementAt(i).toString()
+					until (not numSet.contains(s)) or (i > expStr.size() - 1)
+					loop
+						 s := expStr.elementAt(i).toString()					
+						 
+						 if(numSet.contains(s))then
+						 	s1 := s1 + s
+						 	i := i + 1
+						 else
+						 	i := i - 1
+						 end						 					 
+					end 
+					
+					ExpArray.add(s1)
+					s1 := " "
+				 end
+			end
+			i := i + 1
+		end				
+		//ExpArray.each{e|stdio.writeln("shuju: " + e)}
+		result := ExpArray 
+	end
+}
+
+
+abstract class Expression
+{	
+    operation interpreter(hash : Hashtable<String,String>) : String is abstract
+
+}
+
+class VarExpression inherits Expression
+{   attribute key : String
+	operation initialize(_key : String) : VarExpression is do
+		self.key := _key
+		result := self
+	end
+	method interpreter(hash : Hashtable<String,String>) : String is do
+		result := ""
+		if(isVariable()) then
+			result := "AId  "  + key + ""
+		else
+			result := "ANum  "  + key + ""
+		end
+	end
+	operation isVariable():Boolean is do
+		result :=false
+	    var alpSet : String init "abcdefghigklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		var i:Integer init 0
+		from i
+		until i>alpSet.size()-1
+		loop
+			if(key.contains(alpSet.elementAt(i).toString()))then
+				result := true
+			end
+			i := i+1
+	    end
+	end
+}
+
+abstract class SymbolExpression inherits Expression
+{	reference left : Expression
+	reference right : Expression
+	attribute key : String
+	
+	operation initialize(_left : Expression, _right : Expression, _key : String) : Expression is do
+		self.left := _left
+		self.right := _right
+		self.key := _key
+		result :=self
+	end
+}
+class EmptyExpression inherits Expression
+{
+	reference left : Expression
+	reference right : Expression
+	attribute key : String
+	
+	operation initialize() : Expression is do
+		result :=self
+	end
+	
+	method interpreter(hash : Hashtable<String, String>) : String is do
+ 		result :=""
+	end
+}
+
+class BinaryExpression inherits SymbolExpression
+{
+	method initialize(_left : Expression, _right : Expression, _key : String) : Expression is do
+		super(_left, _right, _key)
+		result := self
+	end
+	
+	method interpreter(hash : Hashtable<String, String>) : String is do
+		if(not hash.containsKey(key)) then
+		     //stdio.writeln("Unsupported Operator: " + key)
+	    else
+			 result := hash.getValue(key)  + "(" + left.interpreter(hash) + ")(" +right.interpreter(hash) + ")" 
+	    end
+	end
+
+}
+
+class UnaryExpression inherits SymbolExpression
+{		
+	method initialize(_left : Expression, _right : Expression, _key : String) : Expression is do
+		super(_left, _right, _key)
+		result := self
+	end
+	method interpreter(hash : Hashtable<String,String>) : String is do
+		result := hash.getValue(key)  + "(" + right.interpreter(hash) + ")"		
+	end
+}

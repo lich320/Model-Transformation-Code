@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="ASCII"?>
+<state:StateModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:state="http://state/1.0" xsi:schemaLocation="http://state/1.0 ../metamodel/state.ecore">
+  <packagedElment xsi:type="state:StateMachine">
+    <region>
+      <subVertex xsi:type="state:PseudoState" name="initial1"/>
+      <subVertex xsi:type="state:State" name="running">
+        <region>
+          <subVertex xsi:type="state:State" name="washing"/>
+          <subVertex xsi:type="state:State" name="spinning"/>
+          <subVertex xsi:type="state:PseudoState" name="H" kind="shallowHistory"/>
+        </region>
+      </subVertex>
+      <subVertex xsi:type="state:State" name="PowerOff"/>
+      <subVertex xsi:type="state:FinalState" name="Final"/>
+    </region>
+  </packagedElment>
+</state:StateModel>

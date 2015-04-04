@@ -1,0 +1,33 @@
+ /* $Id:$ 
+ * Creation : 14 5, 2014
+ * Copyright: ECNU 
+ * Author   : lich  
+ * Editor   : ldou
+ */
+
+package state;
+require  "http://state/1.0"
+require kermeta
+  
+using kermeta::standard 
+using kermeta::persistence
+
+aspect class StateModel   
+{  
+	operation load(f: String): StateModel is do
+		var repository: Repository init EMFRepository.new
+		var resource: Resource init repository.getResource(f)
+		result ?= resource.one
+	end
+
+	operation save(f: String): Void is do
+		var mmUri: String init "platform:/resource/State2Coq/metamodel/state.ecore"
+		var repository: Repository init EMFRepository.new
+		var resource: Resource init repository.createResource(f,mmUri)
+		resource.instances.add(self)
+		resource.save() 
+	end 
+ 
+	
+}
+ 

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="ASCII"?>
+<state:StateModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:state="http://state/1.0" xsi:schemaLocation="http://state/1.0 ../metamodel/state.ecore">
+  <packagedElment xsi:type="state:StateMachine">
+    <region name="r0">
+      <subVertex xsi:type="state:State" name="Sserver">
+        <region name="r1">
+          <subVertex xsi:type="state:State" name="Sexecute">
+            <region name="r3">
+              <subVertex xsi:type="state:State" name="Sident" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0">
+                <region name="ddd">
+                  <subVertex xsi:type="state:State" name="Sid" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0"/>
+                  <subVertex xsi:type="state:State" name="Spwd" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.1" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0"/>
+                  <subVertex xsi:type="state:PseudoState" name="history" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.1" kind="shallow"/>
+                  <transition name="t1" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1">
+                    <trigger>
+                      <event body="eid"/>
+                    </trigger>
+                    <guard>
+                      <specification body="!(afff+bzzz&lt;3)"/>
+                    </guard>
+                  </transition>
+                  <transition name="t4" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1">
+                    <trigger>
+                      <event body="epwd"/>
+                    </trigger>
+                    <guard>
+                      <specification body="axll+bfff==12"/>
+                    </guard>
+                    <effect body="eloginsucc" language=""/>
+                  </transition>
+                </region>
+                <exit body="exlogin"/>
+              </subVertex>
+              <subVertex xsi:type="state:State" name="SCmd" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.1" incoming="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.0 //@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@transition.1">
+                <entry body="encmd"/>
+              </subVertex>
+              <transition name="t3" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1">
+                <trigger>
+                  <event body="eid"/>
+                </trigger>
+                <guard>
+                  <specification body="(a+b)*c&lt;1 &amp;&amp; (c+d >10)"/>
+                </guard>
+                <effect body="eerror"/>
+              </transition>
+              <transition name="t2" source="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.1" target="//@packagedElment/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.0/@region.0/@subVertex.2">
+                <trigger>
+                  <event body="ecmd"/>
+                </trigger>
+                <guard>
+                  <specification body="a+b>3"/>
+                </guard>
+              </transition>
+            </region>
+          </subVertex>
+        </region>
+        <region name="r2">
+          <subVertex xsi:type="state:State" name="SLog">
+            <region name="r4">
+              <subVertex xsi:type="state:State" name="Lwait" outgoing="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@transition.0"/>
+              <subVertex xsi:type="state:State" name="Lwrite" incoming="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@transition.0"/>
+              <transition name="t5" source="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@subVertex.0" target="//@packagedElment/@region.0/@subVertex.0/@region.1/@subVertex.0/@region.0/@subVertex.1">
+                <trigger>
+                  <event body="eid"/>
+                </trigger>
+              </transition>
+            </region>
+          </subVertex>
+        </region>
+      </subVertex>
+    </region>
+  </packagedElment>
+</state:StateModel>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="ASCII"?>
+<Seq:SeqModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:Seq="http://seq/1.0" xsi:schemaLocation="http://seq/1.0 ../metamodel/Seq.ecore">
+  <package1 xsi:type="Seq:Package" name="ExampleSeq" id="">
+    <package2 xsi:type="Seq:Colloboration" name="collorboration1" id="">
+      <ownedBehaviour name="I">
+        <lifeline name="Client" id="" coveredBy="//@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.0 //@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.2 //@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.4 //@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.0 //@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.2/@operand.0/@fragments.0"/>
+        <lifeline name="Server" coveredBy="//@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.1 //@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.3 //@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.3 //@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.1 //@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.2/@operand.0/@fragments.1"/>
+        <fragment xsi:type="Seq:CombinedFragment" name="combie1" interctionOperator="strict">
+          <operand>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="sid" id="" covered="//@package1/@package2/@ownedBehaviour/@lifeline.0" message="//@package1/@package2/@ownedBehaviour/@message.0"/>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="rid" id="" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1" message="//@package1/@package2/@ownedBehaviour/@message.0"/>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="spwd" id="" covered="//@package1/@package2/@ownedBehaviour/@lifeline.0" message="//@package1/@package2/@ownedBehaviour/@message.1"/>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="rpwd" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1" message="//@package1/@package2/@ownedBehaviour/@message.1"/>
+          </operand>
+        </fragment>
+        <fragment xsi:type="Seq:CombinedFragment" name="combine2">
+          <operand>
+            <guard>
+              <specification body="AccountType==100"/>
+            </guard>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="sloginSucc" covered="//@package1/@package2/@ownedBehaviour/@lifeline.0" message="//@package1/@package2/@ownedBehaviour/@message.2"/>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="rloginSucc" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1" message="//@package1/@package2/@ownedBehaviour/@message.2"/>
+            <fragments xsi:type="Seq:CombinedFragment" name="combine3" interctionOperator="opt">
+              <operand>
+                <guard>
+                  <specification body="Balance>0"/>
+                </guard>
+                <fragments xsi:type="Seq:OcurrenceSpecification" name="scmd" covered="//@package1/@package2/@ownedBehaviour/@lifeline.0" message="//@package1/@package2/@ownedBehaviour/@message.3"/>
+                <fragments xsi:type="Seq:OcurrenceSpecification" name="rcmd" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1" message="//@package1/@package2/@ownedBehaviour/@message.3"/>
+              </operand>
+            </fragments>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="sloginFail" covered="//@package1/@package2/@ownedBehaviour/@lifeline.1" message="//@package1/@package2/@ownedBehaviour/@message.4"/>
+            <fragments xsi:type="Seq:OcurrenceSpecification" name="rloginFail" covered="//@package1/@package2/@ownedBehaviour/@lifeline.0" message="//@package1/@package2/@ownedBehaviour/@message.4"/>
+          </operand>
+        </fragment>
+        <message name="id" id="" sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.0" receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.1"/>
+        <message name="pwd" sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.2" receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.0/@operand.0/@fragments.3"/>
+        <message name="loginSucc" sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.0" receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.1"/>
+        <message name="cmd" sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.2/@operand.0/@fragments.0" receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.2/@operand.0/@fragments.1"/>
+        <message name="loginFail" sendEvent="//@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.3" receiveEvent="//@package1/@package2/@ownedBehaviour/@fragment.1/@operand.0/@fragments.4"/>
+      </ownedBehaviour>
+    </package2>
+  </package1>
+</Seq:SeqModel>

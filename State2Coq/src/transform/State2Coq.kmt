@@ -1,0 +1,709 @@
+package state;
+
+/* $Id:$ 
+ * Creation : 14 5, 2014
+ * Copyright: ECNU 
+ * Function ：用于将state模型转换为Coq规范
+ * Author   : lich  
+ * Editor   : ldou
+ */
+
+
+require "http://state/1.0"
+require "platform:/resource/State2Coq/src/interpretor/GuardInterpretor.kmt"
+require kermeta
+   
+using kermeta::standard
+using kermeta::persistence
+using kermeta::io
+using state
+using interpretor
+
+aspect class StateModel{
+	attribute transitionList : oset TransitionStruct[0..*] 
+    attribute stateList : oset StateStruct[0..*]
+    
+    operation toCoq(): String is do
+		result := ""
+		var guardFlag : Integer init 0	
+		var transResult : String init ""
+		var stateResult : String init ""
+		var guardResult : String init ""
+	  
+		
+		//初始化工作，设置顶层顶点深度为0，然后设置所有顶点深度
+		self.packagedElment.asType(StateMachine).region.one.subVertex.each{e | e.initialize()}
+		//初始化guard的编号。
+	    self.packagedElment.asType(StateMachine).region.one.initializeFlag(0)
+	    self.packagedElment.asType(StateMachine).region.one.subVertex.each{e | e.setVertexDeep()}
+	   
+	    //获得transitionList和GuardList 
+	    self.packagedElment.asType(StateMachine).region.one.getTransList(transitionList)
+        //获得stateList
+	   // self.packagedElment.asType(StateMachine).region.one.subVertex.each{e |
+	  //   e.toCoq(transitionList,stateList)} 
+	          self.packagedElment.asType(StateMachine).region.one.subVertex.one.asType(Vertex).toCoq(transitionList,stateList)
+	    
+	    //调整工作，设置state的id，设置子状态列表中状态的id、guard的id
+	    //并同时设置transitionList中的源和目的状态在stateList中的相应id
+        self.setStateID(stateList)
+        self.setGuardID(transitionList)   
+        self.setStateIDInTransList(transitionList,stateList)
+        self.setSubStates(stateList)
+   		        
+        //利用stateList将state转换到Coq规范，利用transitionList将guard和transition转换到Coq规范
+        stateResult := self.state2Coq(stateList)
+        guardResult := self.guard2Coq(transitionList)
+	    transResult := self.trans2Coq(transitionList)	    
+			     	    
+	    result.append(guardResult + "\n" + transResult + "\n"  + stateResult)
+	end
+	
+	//将子状态集合改变
+	operation setSubStates(sstateList : oset StateStruct[0..*]) is do
+		var subStrSet : oset String[0..*] init kermeta::standard::OrderedSet<String>.new
+		var numFlag : Integer init 0
+		var subStatesNum : Integer
+		var currentSub : String 
+		//将子状态改为对应的ID
+		stateList.each{s |
+	        if(s.subStates != "")then
+	        	s.subStates.each{e |
+	        	 		stateList.each{s1 |
+	        	 			if(s1.name == e) then
+	        	 				 subStrSet.add(s1.ID.toString())	        	 				
+	        	 			end
+	        	 		}
+	        	 }
+	        end
+	        s.subStates.clear()
+	        s.subStates.addAll(subStrSet)
+	        subStrSet.clear()
+	     }
+	     //获得子状态的Coq形式 
+	     stateList.each{s |
+	     		if(s.subStates.size() > 0)then
+	     			subStatesNum := s.subStates.size()
+	     			
+	     			s.subStates.each{e |
+	     				numFlag := numFlag + 1
+	     			 if(numFlag == 1) then
+	   		 	 	  	 currentSub := "(" + "n" + e 
+	   		 	 	  	 if(subStatesNum == 1) then 
+	   		 	 	  	 	 currentSub := "(" + "n" + e + " :: nil)"
+	   		 	 	  	 end
+	   		 		 else
+	   		 	   	  	 if(numFlag == subStatesNum) then
+	   		 	  	 	 	 currentSub := currentSub + " :: " + "n" + e  + " :: nil)"
+	   		 		 	 else
+	   		 	 	   	 	 currentSub := currentSub + " :: " + "n" + e
+	   		 	 	 	 end
+	   		 	 	end
+	     			}
+	     		end
+	     	numFlag := 0
+	     	subStatesNum :=0	
+	     	s.subStatesCoq := currentSub
+	     }
+	end
+	
+	//获得迁移所在的或状态
+	 operation getTransContainer_OrState(trans :String) : StateStruct is do 
+	 	 var or_state:StateStruct init StateStruct.new
+	 	stateList.each{s|
+	 		if(s.type.equals("or"))then
+	 			if(s.subTransiton.contains(trans))then
+	 				or_state := s
+	 			end
+			end
+		}
+		result := or_state
+	 end	
+
+	
+	
+	//利用stateList设置transList的源、目的状态的ID
+	operation  setStateIDInTransList(transList : oset TransitionStruct[0..*], stateList : oset StateStruct[0..*]) is do		
+		var trans_container : StateStruct init StateStruct.new
+		transList.each{trans |
+		  //获取包含该迁移的or状态。
+			trans_container := getTransContainer_OrState(trans.tName)
+			//根据trans的源和目标状态在or状态的子状态列表中的位置来确定源和目标状态的编号
+			trans.sStateID := trans_container.subStates.indexOf(trans.sState.name)
+			trans.tStateID := trans_container.subStates.indexOf(trans.tState.name)
+		}	
+	end
+	
+	//设置guard的ID
+	operation setGuardID(transList : oset TransitionStruct[0..*]) is do
+	    var flag : Integer init 0
+	    transList.each{e|
+	         //为BTrue时id改为-1，表示不需要Definition
+	     	 if(not e.guard.equals("BTrue"))then
+	     	 	e.guardID := flag
+	     	 	flag := flag + 1
+	     	 else 
+	     	    e.guardID := -1
+	     	 end
+	     }	    
+	end
+	
+	//设置stateList中的State的ID
+	operation setStateID(stateList : oset StateStruct[0..*]) is do
+	    var flag : Integer init 0
+	    stateList.each{e |
+	        e.ID := flag
+	        flag := flag + 1
+	     }	    
+	end
+	
+	operation state2Coq(stateList : oset StateStruct[0..*]) : String is do
+		result := ""
+		var currentState : String init ""
+	    stateList.each{state |
+	    	if(state.type == "pseudo")then
+	    		 	  currentState := currentState +  "SA" + "n" + state.ID.toString() + " = [" + state.name + "," + "(nil, nil)" + "]" + ".\n"
+	    	else if(state.type == "basic") then
+	    			 currentState := currentState + "Definition " + "n" + state.ID.toString() + " : sc := basic_sc" + " \"" + state.name + "\" " + state.entryExit  + ".\n"
+	    		  else if(state.type == "or") then
+	    		  		 currentState := currentState + "Definition " + "n" + state.ID.toString() + " : sc := or_sc" + " \"" + state.name + "\"" +  " " + 
+	 	 					state.subStatesCoq + " 0 " + state.subTransiton +  " " + state.entryExit  + ".\n"
+	    		  		else if(state.type == "and") then
+	    		  			currentState := currentState +  "Definition " + "n" + state.ID.toString() + " : sc := and_sc" + " \"" + state.name + "\"" +  " " + 
+	 							 state.subStatesCoq+ " " + state.entryExit  + ".\n"
+	    		  			  else 	
+	    		  				 stdio.writeln("Sorry, we don't support state" + state.name)
+	    		  			 end
+	    			   end
+	    		 end
+	        end
+	    }
+  		 result := currentState
+	end 
+	
+	operation guard2Coq(transList : oset TransitionStruct[0..*]) : String is do 
+	 	 result := ""	
+	 	 var currentGuardRes : String init "" 	
+	 	 var cal : Calculator init Calculator.new
+	 	 transList.each{e |
+	 	   //为-1时不需要定义
+	 	    if(e.guardID != -1) then
+	 	       //stdio.writeln("guard: " + e.guard)
+	 	 		currentGuardRes := currentGuardRes + "Definition " + "g" + e.guardID.toString() + " : guard := " + cal.initialize(e.guard)+ "\n" 
+	 	 	end
+	 	 }
+	 	 result := currentGuardRes 
+	end 
+	
+	//利用生成的transList，最终生成trans的代码
+	operation trans2Coq(transList : oset TransitionStruct[0..*]) : String is do 	
+ 	     result := ""	
+ 	     var currentTransList : String init "" 	  
+ 	     transList.each{trans |
+ 	     var guard : String
+ 	     if(trans.guardID == -1) then
+ 	          guard := "BTrue"
+ 	     else
+ 	          guard := "g" + trans.guardID.toString()
+ 	     end
+	 	 currentTransList := currentTransList + "Definition " + trans.tName + ": trans := " + "(" + "\""+ trans.tName + "\"" + ", " + trans.sStateID.toString() + ", " +
+	 					 trans.sr + ", " + trans.event + ", " + guard + ", " + trans.action + ", " + trans.tr + ", " +
+	 	 				 trans.tStateID.toString() + ", " + trans.ht + ")." + "\n"	 	 
+ 	     }
+	 	 result := currentTransList 	
+	 end	 
+}
+
+class StateStruct
+{
+     attribute name : String
+     attribute type : String
+     attribute ID : Integer
+     attribute subStates : oset String[0..*]
+	 attribute subTransiton : String
+	 attribute entryExit : String	 
+	 attribute subStatesCoq : String
+}
+
+/*
+* Transition 的数据结构
+*/
+class TransitionStruct{
+        attribute tName : String
+        attribute sStateID : Integer //迁移所在状态的
+        reference sState : Vertex
+        attribute sr : String  //源决定因子
+        attribute event : String
+        attribute action : String
+        attribute guard : String
+        attribute tr : String //目标决定因子
+        reference tState : Vertex //注意一定要是reference，否则的话，tState的container就不是Region，而变成了TransitionStruct
+        attribute tStateID :Integer
+        attribute ht : String
+        attribute type : Integer//用来判断是否是同层之间的转换，0表示同层，1表示非同层
+        reference parentState : Vertex //用来记录sState和tState共同的父状态
+        attribute guardID : Integer //卫士条件的ID
+} 
+
+aspect class Region{
+	attribute flag : Integer 
+  	operation initializeFlag(flag : Integer) : Integer is do
+  		self.transition.each{e |
+  		    if((not e.isVoid())) then
+					e.initializeGuardFlag(flag)
+					flag := flag + 1
+		  	 end
+		  	 result :=  flag
+		}
+		self.subVertex.each{e |		         
+	   			if(e.isInstanceOf(State))then
+					if(e.asType(Vertex).typeDetect() != "basic_state" and e.isKindOf(State) and e.asType(State).region.size != 0 ) then
+	    			 e.asType(State).region.each{re |
+	    			 	  	 flag := re.initializeFlag(flag)
+	    			    }
+	    			end	 
+	          end
+	          result := flag
+	    }
+  	end
+
+
+    operation getTransList(transList : oset TransitionStruct[0..*]): oset TransitionStruct[0..*] is do  	 
+    	//最顶层状态之间的trans加入到transList中
+		self.transition.each{e |
+			transList.add(e.genTrans())
+		}
+		//其他层的trans加入到transList中
+	     self.subVertex.each{e|
+	   			if(e.isInstanceOf(State))then
+					if(e.asType(Vertex).typeDetect() != "basic_state" and e.isKindOf(State) and e.asType(State).region.size != 0 ) then
+	    			 e.asType(State).region.each{re|
+	    			 	  	 //stdio.writeln("other layer getTransList " + re.name)
+	    			 	  	 re.getTransList(transList)
+	    			    }
+	    			end	
+	    		end
+	    }
+	   result := transList
+    end
+}
+
+/* ********************Transition 2 Coq ****************/
+aspect class Transition{
+	 attribute guardFlag : Integer
+	 
+	 operation initializeGuardFlag(flag : Integer) is do
+	  		 guardFlag := flag
+	  		// stdio.writeln("Name" + self.name + " guard:" + guardFlag.toString() )
+	  		 
+	 end
+	 
+	 operation genTrans() : TransitionStruct is do
+		// stdio.writeln(self.guardFlag.toString())
+		 var trans : TransitionStruct init TransitionStruct.new
+		 // 以id的形式保存
+		 trans.tName := self.name 
+	 	 trans.event := if(not self.trigger.isVoid()) then
+	 	                  "\"" + self.trigger.event.asType(Event).body + "\"" 
+	 	                else "" 
+	 	                end
+	 	                
+	 	 self.guardFlag := self.guardFlag + 1
+	 	 //guard先保存起来，然后再按照定义输出
+	 	 if(not self.guard.isVoid()) then 
+	 	  	  trans.guard: = self.guard.specification.body
+	 	 	  trans.guardID := guardFlag
+	 	  else 
+	 	  	  trans.guard:= "BTrue"
+	 	  	  trans.guardID := guardFlag
+	 	  end
+	 	 
+	 	 trans.action := if(not self.effect.isVoid()) then "\"" + self.effect.body + "\"" + " :: nil"
+	 	  				else "nil"
+	 	  				end
+	 	 trans.sState := self.source 
+	 	 trans.sr := "nil"
+	 	 trans.tr := "nil"
+		 //如果当前迁移的target状态为伪历史状态，则ht不为空，且tState为历史状态的父状态
+	 	 if(self.target.isHistory(self.target)) then
+	 	     //stdio.writeln("History: " + self.target.name + " " + self.name )
+	 	  	 trans.tState:= self.target.container().asType(Region).container().asType(Vertex)
+	 	 	 trans.ht := self.target.asType(PseudoState).kind.name
+	 	 	 //stdio.writeln("History:'parent State: " + trans.tState.name + self.name )
+		 else
+			 trans.tState := self.target	 
+		     trans.ht := "none"
+	 	 end
+	 	 //判断转移的sState和tState是否是同一状态下的子状态，如果不是的话需要改变sState和tState，以及源、目标决定因子sr和dr	 	 
+	 	 if(not isPeer(trans.sState,trans.tState)) then 
+	      	trans := changeTrans(trans)
+	     end
+		 result := trans
+   	 end
+
+	//当迁移不在同一层时，需要改变sr和tr
+	operation changeTrans(trans : TransitionStruct) : TransitionStruct is do
+ 		 var sState : Vertex init trans.sState
+	  	 var tState : Vertex init trans.tState
+	 	 var currencTrans : String init ""
+	 	 var srString :String init ""
+	 	 var trString :String init ""
+	 	 //源目标决定因子
+	 	 var sr : oset String[0..*] init kermeta::standard::OrderedSet<String>.new
+	 	 var tr : oset String[0..*] init kermeta::standard::OrderedSet<String>.new
+	 	 
+	 	 trans.sr := ""
+	 	 trans.tr := ""
+	 	 
+	  	 if(sState.vertexDeep == tState.vertexDeep) then
+	  	 	   	// do nothing 	  
+	  	 else 	
+	  	 		if(sState.vertexDeep < tState.vertexDeep) then
+	  	    		//找到深度较深的那个状态的父状态
+	  	   	 		from  true
+	  		 		until sState.vertexDeep == tState.vertexDeep
+	  	 			loop
+	  	      			tr.add(tState.name)
+	  	     			tState := tState.container().asType(Region).container().asType(Vertex)
+		  			 end
+	  	    		//直到sState和tState的父状态相同，即所属区域相同
+	  	    		tr.addAt(0,tState.name)
+	  			 else
+	  	   			from  true
+	  		 		until sState.vertexDeep == tState.vertexDeep
+	  	 			loop
+	  	      			sr.add(sState.name)
+	  	     			sState := sState.container().asType(Region).container().asType(Vertex)
+		  			 end
+		  			  //新加入的一行，最顶层的那个状态也要加入sr和tr
+		  			  sr.addAt(0,sState.name)
+	  			 end
+	  	 end
+		
+	  	 
+	  	 trans.tState := tState
+	  	 trans.sState := sState
+	  	 var size : Integer init tr.size()
+	  	 var flag : Integer init 0
+	  	 tr.each{e | flag := flag + 1
+	  	       		 if(flag >= size) then 
+	  	                 trans.tr := trans.tr +  "\"" + e +"\""
+	  	             else
+	  	                 trans.tr := trans.tr +  "\"" + e +"\"" + " :: "
+	  	             end  
+	  	             }
+	  	flag := 0
+	  	size := sr.size()
+	  	sr.each{e | flag := flag + 1
+	  	       		 if(flag >= size) then 
+	  	                 trans.sr := trans.sr + "\"" + e +"\""
+	  	             else
+	  	                 trans.sr := trans.sr+ "\"" + e + "\"" + " :: "
+	  	             end  
+	  	             }
+	  	  if(trans.sr != "") then	  	   		
+	  	   	   trans.sr := "(" + trans.sr + " :: nil)"
+	  	   else
+    	        trans.sr := "nil"
+	  	   end 
+	  	  if(trans.tr != "") then
+	  	        trans.tr := "(" + trans.tr + " :: nil)"
+	  	   else
+	  	        trans.tr := "nil"
+	  	   end 
+		 result := trans
+	end
+	
+
+  	/*  
+	 *  判断两个状态时是否是同一个父状态 
+	 */
+	 operation isPeer(s1 : Vertex, s2 : Vertex) : Boolean is do 
+	 	 result := true
+	  	 if(s1.container().oid != s2.container().oid) then 
+	  		 result := false
+	  	 end
+	 end
+}
+
+
+/*
+ * 判断状态的类型，并分别实现转换
+ *
+*/
+aspect class Vertex{
+	 attribute vertexDeep:Integer
+     //最顶层的状态的深度初始化为0
+     operation initialize() is do 
+  	  	 vertexDeep := 0
+  	  	//stdio.writeln("vertex: " + self.name + " Deep:  " + vertexDeep.toString())
+  	 end
+  	 operation setVertexDeep() is do 
+		 var stateType : String 
+		 self.asType(State).region.each{e |	 	 
+	 	 	 //处理当前状态每个region里的subVertex，如果是历史状态的话，就不被显示
+	 	     e.subVertex.each{e|
+	 	     	 e.asType(Vertex).vertexDeep := e.container.asType(Region).container().asType(Vertex).vertexDeep + 1
+	   			 //stdio.writeln("vertex: " + e.name + " Deep: " + e.vertexDeep.toString())
+	   			  //必须是State类型的，且拥有子状态的vertex才可以递归调用setVertexDeep
+	   			  if(e.isKindOf(State))then
+	   			  	  if(e.asType(State).region.size != 0)then
+	   			  	  	 e.setVertexDeep()
+	   			  	  end
+	   			  end
+	   		 }    
+	 	 } 
+   	end   
+   	
+     operation toCoq(transList : oset TransitionStruct[0..*], stateList:oset StateStruct[0..*]) is do
+		 var stateType : String 
+	     if(self.isInstanceOf(State))then
+			 stateType := self.typeDetect()	    //可以改成多态的形式， 构造一个辅助类，Trans 有3个子类，实现Trans的toCoq方法。
+	         // 三种非伪状态的state的处理
+	    	 if(stateType == "basic_state") then
+	    		 basic_State2Coq(stateList)
+	    	 else
+	    		 if(stateType == "or_state") then
+	    		 	 or_State2Coq(transList,stateList)
+	    		 else 
+	    			and_State2Coq(transList,stateList)
+	    		 end
+	    	 end
+	   /*  else  //伪状态的处理
+	    	 if(self.isKindOf(PseudoState)) then
+	    	 	 Pseudo_State2Coq(stateList)
+	    	 end	    */
+	     end
+	 end
+	 
+	 /*
+	  * 非历史状态的伪状态的转换方法
+	 */
+	 operation Pseudo_State2Coq(stateList : oset StateStruct[0..*])is do 
+	 	 var state:StateStruct init StateStruct.new
+	 	 state.name := self.name
+	 	 state.type := "pseudo"
+	 	 state.entryExit := "(nil, nil)"
+	 	 stateList.add(state)
+	 end 	 
+	 
+	 /*
+	  * 基本状态的转换方法
+	 */
+	 operation basic_State2Coq(stateList : oset StateStruct[0..*])is do
+	 	
+	 	 var state:StateStruct init StateStruct.new
+	 	 var entryExit : String
+	 	 entryExit := getEntryExitAction()
+	 	 if(entryExit == "") then
+	 	 	 entryExit := "(nil, nil)"
+	 	 end 
+	 	 	 	 
+	 	 state.name := self.name
+	 	 state.type := "basic"
+	 	 state.entryExit := entryExit
+	 	 stateList.add(state)
+	 	
+
+	 end 
+	 
+	 /*
+	  * 或状态的转换方法
+	 */
+	operation or_State2Coq(transList : oset TransitionStruct[0..*], stateList : oset StateStruct[0..*])is do
+	 	 
+		 var state : StateStruct init StateStruct.new	
+	 	 var entryExit : String
+	 	 var subStates : String init ""
+	 	 var subTrans : String init ""//子状态迁移的集合
+	 	 //获得入口出口动作
+	 	 entryExit := getEntryExitAction()
+	 	 //子状态迁移列表生成
+	 	 subTrans := getSubTransition(transList)
+	 	 //子状态调用toCoq方法进行转换
+	 	 self.asType(State).region.each{e|	 	 
+	 	 	 //处理当前状态每个region里的subVertex，如果是历史状态的话，就不被显示
+	 	     e.subVertex.each{e|
+	 	         if(not self.isHistory(e)) then
+	 	         	 //子状态e调用状态转换方法toCoq()
+	   		 	 	 e.toCoq(transList,stateList)
+	   		 	end
+	   		 }   
+	 	 }
+	 	 state.name := self.name
+	 	 state.type := "or"
+	 	 state.entryExit := entryExit
+	 	 //子状态列表的生成	 	 
+  	     getSubStatesList(state.subStates)
+	 	 state.subTransiton := subTrans
+	 	 stateList.add(state)
+	 end 
+	 
+	 /*
+	  * 与状态的转换方法
+	 */
+	 operation and_State2Coq(transList : oset TransitionStruct[0..*], stateList : oset StateStruct[0..*])is do
+	
+	 	 //stdio.writeln("Transform AND_state"+ self.name)
+	 	 var state:StateStruct init StateStruct.new	
+	 	 var entryExit : String
+	 	 var subStates : String init ""
+	 	 
+	 	 //获得入口出口动作
+	 	 entryExit := getEntryExitAction()
+	 	 //子状态列表的生成
+	 	 //subStates := getSubStatesList() 
+	 	 //子状态调用toCoq方法进行转换
+	 	 self.asType(State).region.each{e |
+	 	 	 //处理当前状态每个region里的subVertex，如果是历史状态的话，就不被显示
+	 	     e.subVertex.each{e |
+	 	     	 e.asType(Vertex).vertexDeep := e.container.asType(Region).container().asType(Vertex).vertexDeep + 1
+	 	         if(not self.isHistory(e)) then
+	   		 	 	 e.toCoq(transList,stateList)//子状态e调用状态转换方法toCoq()
+	   		 	end
+	   		 }   
+	 	 }
+	 	 state.name := self.name
+	 	 state.type := "and"
+	 	 state.entryExit := entryExit
+	 	 getSubStatesList(state.subStates)
+	 	 stateList.add(state)
+	 	
+	 end 
+	 /*
+	 * 判断当前状态是不是历史状态，如果是历史状态，则不当作上层状态的子状态进行显示
+	 */
+	 operation isHistory(e : Vertex) : Boolean is do 
+	 	 result := false
+	 	 if(e.isKindOf(PseudoState)) then 
+	 	     //stdio.writeln(e.asType(PseudoState).kind.name)
+	 	     if(e.asType(PseudoState).kind.name == "none" or e.asType(PseudoState).kind.name == "shallow" or e.asType(PseudoState).kind.name == "deep") then
+	 	  		 //stdio.writeln("Histroy State: " + e.name)
+	 	  		 result := true
+	 	  	  end
+	 	 end
+	 end
+	 
+	/*
+	 * 获得子状态迁移的列表
+	 */
+	 operation getSubTransition(transList : oset TransitionStruct[0..*]) : String is do
+	 	 result := ""
+	 	 var parentStateName : String init ""
+	 	 var oid :Integer init 0
+	 	 var subTrans : oset String[0..*] init kermeta::standard::OrderedSet<String>.new
+	 	 var currTransRes : String init ""
+	 	 transList.each{trans | 
+	 	   //stdio.writeln("trans parentStateName: " + trans.sState.container().asType(Region).container().asType(Vertex).oid.toString() + "current State Name" + self.name + self.oid.toString())
+	 	   parentStateName := trans.sState.container().asType(Region).container().asType(Vertex).name
+	 	   oid := trans.sState.container().asType(Region).container().asType(Vertex).oid
+		   //如果trans的sstate的父状态是当前状态，则将trans加入到当前状态
+	 	   if(parentStateName == self.name and oid == self.oid) then
+	 	    	   subTrans.add(trans.tName)
+	 	   end
+	 	 }
+	 	 var size : Integer init subTrans.size()
+	 	 var flag : Integer init 0
+	 	 subTrans.each{e |
+	 	 		flag := flag + 1
+	 	 		if(flag >= size) then 
+	 	 			currTransRes :=  "(" + currTransRes + e + " :: nil" + ")"
+	 	 		else
+	 	 		    currTransRes := currTransRes + e + " :: "
+	 	 		end
+	 	 }
+	 	 if(currTransRes == "") then
+	 	  	 currTransRes := "nil"
+	 	 end
+	 	 result := currTransRes 
+	 end
+	 
+	/*
+	 * 获得子状态列表
+	 */
+	 operation getSubStatesList(subStateList : oset String[0..*]) : String is do 
+	 	 result := ""
+	 	 var subStates : String init ""
+	 	 var subState11: String init ""
+	 	 //当前状态含有的region数目
+	 	 var subStatesNum : Integer init self.getSubStatesNum() //获得子状态的数目，不包括历史类型的伪状态
+	 	 var numFlag : Integer init 0
+	 	 
+	  	 self.asType(State).region.each{e |
+	 	 	 //stdio.writeln("get OR_state " + self.name + "'s ")
+	 	 	 //处理当前状态每个region里的subVertex，如果是历史状态的话，就不被显示
+	 	     e.subVertex.each{e |
+	 	         if(not self.isHistory(e)) then
+	 	         	 numFlag := numFlag + 1
+	   		 	 	subStateList.add(e.name)
+	   		 	end
+	   		 }   
+	 	 }
+	 	 result := subStates 
+	 end
+	 
+	 /*
+	  * 获得入口和出口动作
+	 */
+	 operation getEntryExitAction() : String is do 
+	 	 result := ""
+	 	 var entryExit : String init ""
+	 	 var entryAction : String
+	 	 var exitAction : String
+	 	 
+	 	 if(not self.asType(State).entry.isVoid()) then
+	 	     entryAction := "\"" + self.asType(State).entry.body +  "\"" + " :: nil"
+	 	 else 
+	 	     entryAction := "nil"
+	 	 end
+	 	 if(not self.asType(State).exit.isVoid()) then
+	 	 	 exitAction := "\"" + self.asType(State).exit.body + "\"" + " :: nil"
+	 	 else
+	 	  	 exitAction := "nil"
+	 	 end
+	 	 //stdio.writeln("EntryExitAction: " + entryAction + exitAction)
+	 	 entryExit := "(" + entryAction + ", " + exitAction + ")" 	
+	 	 result := entryExit
+	 	
+	 end
+	 
+	 /*
+	  * 获得组合状态的子状态数目，不包括历史类型的子状态
+	 */
+	 operation getSubStatesNum() : Integer is do 
+	 	 result := 0
+	 	 var num : Integer init 0
+ 	 	 self.asType(State).region.each{e|
+	 	     e.subVertex.each{e|
+	 	          if(not self.isHistory(e)) then
+				  	 num := num + 1
+				  end 	         
+	   		 }   
+	 	 }
+	 	 result := num	 	 
+	 end
+	  
+	 /*
+	  * 检测一个State类型的subVertex（即state）包含的region的数目，从而判断出state的类型。FinalState类的state也被当作一个basic_state
+	 */
+	 operation typeDetect() : String is do 
+	     result := ""
+	     var regionNum : Integer init 0
+	     //stdio.writeln("detect state: " + self.name)
+	     regionNum := self.asType(State).region.size
+	     //stdio.writeln("regionNum :" + regionNum.toString())
+	      
+	     if(self.isKindOf(FinalState)) then
+	     	 result := "basic_state"
+	     end
+	     if(regionNum == 0)then
+	    	 result := "basic_state"
+	     else
+	    	 if(regionNum == 1) then
+	    		 result := "or_state"
+	    	 else
+	    		 result := "and_state"
+	    	 end
+	     end
+	 end 
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="ASCII"?>
+<state:StateModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:state="http://state/1.0" xsi:schemaLocation="http://state/1.0 ../metamodel/state.ecore">
+  <packagedElment xsi:type="state:StateMachine">
+    <region name="region1">
+      <subVertex xsi:type="state:State" name="s0">
+        <region name="region2">
+          <subVertex xsi:type="state:State" name="s1">
+            <region name="region3" id="">
+              <subVertex xsi:type="state:State" name="s5"/>
+              <subVertex xsi:type="state:State" name="s6"/>
+            </region>
+          </subVertex>
+          <subVertex xsi:type="state:State" name="s2">
+            <region name="region4">
+              <subVertex xsi:type="state:State" name="s7"/>
+              <subVertex xsi:type="state:State" name="s8"/>
+            </region>
+            <region name="regino5">
+              <subVertex xsi:type="state:State" name="s9"/>
+              <subVertex xsi:type="state:State" name="s10"/>
+            </region>
+          </subVertex>
+        </region>
+        <region name="region6">
+          <subVertex xsi:type="state:State" name="s3"/>
+          <subVertex xsi:type="state:State" name="s4"/>
+        </region>
+      </subVertex>
+    </region>
+  </packagedElment>
+</state:StateModel>

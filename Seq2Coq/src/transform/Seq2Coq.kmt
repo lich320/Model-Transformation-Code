@@ -1,0 +1,344 @@
+/* $Id:$ 
+ * Creation : June 7, 2013
+ * Copyright: ECNU 
+ * Function ：将序列图模型转换为Coq规范
+ * Author   : lich  
+ * Editor   : ldou
+ */
+ 
+package Seq; 
+require "http://seq/1.0"
+require "platform:/resource/Seq2Coq/src/interpretor/GuardInterpretor.kmt"
+require kermeta
+   
+using kermeta::standard
+using kermeta::persistence 
+using kermeta::io
+using interpretor  
+using Seq  
+
+aspect class SeqModel { 
+	 attribute guardList : oset GuardStruct[0..*]
+	operation toCoq(): String is do
+	  var messRes:String init ""
+	  var fragRes:String init ""
+	  var guardRes:String init ""
+	  var packageName:String init ""
+	  result :=""
+	  //将所有消息转化为Coq
+      self.package1.asType(Package).package2.asType(Colloboration).ownedBehaviour.message.each{e|
+      	messRes := messRes + e.toCoq()
+      }  
+     //使用了interaction的父类InteractionOperand中的initialize方法，来初始化i和s1
+     self.package1.asType(Package).package2.asType(Colloboration).ownedBehaviour.initialize()
+ 	 self.package1.asType(Package).package2.asType(Colloboration).ownedBehaviour.initializeGuardID()
+ 	 self.package1.asType(Package).package2.asType(Colloboration).ownedBehaviour.fragment.each{e|         
+           e.initializeGuard(1)
+     }
+	  //将fragment中的所有的内容转换为Coq表示	
+     self.package1.asType(Package).package2.asType(Colloboration).ownedBehaviour.fragment.each{e|         
+           fragRes := fragRes + e.toCoq(guardList)
+     }
+     
+     packageName:= self.package1.asType(Package).name
+     fragRes := "Definition "+  packageName+": SeqDiag := " + fragRes +"."
+     guardRes := guard2Coq()
+     
+     result := guardRes +"\n" + messRes+ "\n"  + fragRes
+	end	
+	
+	
+	operation guard2Coq():String is do
+		
+		var guard:GuardStruct init GuardStruct.new
+		var cal:Calculator init Calculator.new
+		var res:String init ""
+		guardList.each{e|
+			res := res + "Definition c"+ e.guardID.toString() + ": cnd := " + cal.initialize(e.guardStr)+ ".\n" 
+		} 
+		
+		result:= res	
+	end
+ 
+}
+
+class GuardStruct
+{
+	attribute guardID : Integer
+	attribute guardStr :String
+}
+
+
+aspect class Message
+{ reference sendLineName:String
+  reference recLineName:String
+  
+   operation  toCoq():String is do 
+   var messName:String init self.name
+   var colon:String init "\""
+   sendLineName:=self.getSendLineName()
+   recLineName:=self.getRecLineName()
+   result :=""
+
+  result.append("Definition s"+messName+" : event" +" := (!," + "\""+messName+colon+","+colon+sendLineName+colon+","
+					+colon+recLineName+colon+").\n")
+  result.append("Definition r"+messName+" : event" +" := (?," + "\""+messName+colon+","+colon+sendLineName+colon+","
+					+colon+recLineName+colon+").\n")
+   end
+   
+   operation getSendLineName():String is do
+      self.sendEvent.type:="send"
+      result:=self.sendEvent.covered.one.name  
+   end
+   operation getRecLineName():String is do
+       self.receiveEvent.type:="receive"
+       result:=self.receiveEvent.covered.one.name
+   end
+   
+}
+
+
+aspect class InteractionOperand
+{   reference s1:String   
+    reference i:Integer
+    reference id:Integer
+    //初始化s1和i，i为计数器，s1用来保存中间结果
+    operation initialize():Void is do
+     s1:="" 
+     i:=1
+    end
+    operation initializeGuardID():Void is do
+      id:=1
+    end
+}
+aspect class InteractionFragment
+{    reference size1:Integer//记录最顶层的片段数目
+     reference type:String//标记是接受事件还是发送事件
+     attribute flag : Integer 
+     
+     operation initializeGuard(flag:Integer):Integer is do
+     	
+     	self.asType(CombinedFragment).initializeGuardFlag(flag)
+     	flag := flag + 1
+     	
+     	self.asType(CombinedFragment).operand.one.fragments.each{e| 
+     	if(e.isInstanceOf(CombinedFragment))then
+     		flag := e.asType(CombinedFragment).initializeGuard(flag)     		
+     	end	
+     	}
+     	result := flag
+     end
+     
+     operation toCoq(guardList : oset GuardStruct[0..*]):String is do
+       var s2:String  
+       size1:=self.getFragmentSize() 
+       s2:=self.container().asType(Interaction).s1//执行到本片段产生的结果
+       var j:Integer init  self.container().asType(Interaction).i//计数器      
+      result:=""   
+       
+       if(self.isInstanceOf(OcurrenceSpecification))then
+       //为事件类型时  
+           s2:=self.dealOccFragIntoCoq(j,s2)
+           
+       //为组合片段类型时
+       else                 
+            s2:=self.dealCombineFragIntoCoq(guardList,j,s2) 
+            
+       end
+          //当j等于size1时
+         if((j==size1 and self.type=="receive")or(j==size1 and self.isInstanceOf(CombinedFragment))) then
+            result.append(s2)
+         else
+           self.container().asType(Interaction).s1:=s2
+         end
+      end
+ 
+  operation toCoq2(guardList : oset GuardStruct[0..*]):String is do
+    //第一层fragment的数
+       var s2:String 
+       var combinedFragmentName:String  init self.getCombinedFragmentName()
+       size1:=self.getFragmentsSizeInCombinedFragment()
+       s2:=self.container().asType(InteractionOperand).s1
+       var j:Integer init  self.container().asType(InteractionOperand).i
+       result:=""
+       
+       //当前片段为事件类型
+      if(self.isInstanceOf(OcurrenceSpecification)) then
+         //一次处理每一个片段，并将当前片段处理后的结果放在s2中
+         s2:=dealOccFragIntoCoq2(guardList,j,s2,combinedFragmentName)
+         
+         //当循环执行到最后一个片段时，输出结果
+         if(j==size1 and self.type=="receive")then  
+             result.append(s2)
+         else
+              self.container().asType(InteractionOperand).s1:=s2      
+         end
+      else //当前事件为组合片段类型
+      
+          s2:=dealCombineFragIntoCoq2(guardList,j,s2,combinedFragmentName)
+          
+          if(j==size1)then//当循环处理到第size1个片段时，返回结果，表示已经处理完当前所有层次的所有的片段
+            result.append(s2)
+           // stdio.writeln("Result Current Combie   " +s2)
+          else//否则继续保存结果
+            self.container().asType(InteractionOperand).s1:=s2      
+          end  
+      end
+     end
+     
+         
+    //在toCoq中处理事件类型的片段的方法，flag用来标记当前片段上层是否为一个组合片段
+    operation dealOccFragIntoCoq(j:Integer,s2:String):String is do
+       result:=""
+        if(j==1) then  //j==1表示对第一个消息的两个片段的处理，send和receive分开处理
+             if(self.type=="send")then
+                   s2:=s2+"Dstrict (De "+self.name+")"
+              else
+                   if(self.type=="receive")then
+                     s2:=s2+"(De "+self.name+")"
+                     self.container().asType(InteractionOperand).i:=j+1
+                    end
+               end
+           else// j>1为后续来的片段
+               if(self.type=="send")then 
+                 s2:="Dstrict ("+s2+")"+"(Dstrict(De "+ self.name + ")"                 
+               else 
+                 s2:=s2+ "(De "+ self.name+"))"
+                 self.container().asType(InteractionOperand).i:=j+1
+               end
+           end       
+         result.append(s2)  
+       
+    end   //在toCoq中处理事件类型的片段的方法，upperComFragName标记上层组合片段的名字
+    operation dealOccFragIntoCoq2(guardList : oset GuardStruct[0..*],j:Integer,s2:String,upperComFragName:String):String is do
+       result:=""
+       if(upperComFragName=="opt")then//上层组合片段为opt
+          s2:=dealOccFragIntoCoq(j,s2)
+       else//为其他类型的组合片段
+           if(j==1)then
+                  if(self.type=="send")then
+                     s2:="Dstrict (De "+self.name+")"
+                  else
+                     s2:=s2+"(De "+self.name+")"
+                     self.container().asType(InteractionOperand).i:=j+1//处理完一个消息所对应的两个事件，计数器加一
+                  end
+               else 
+                  if(j==size1)then//z在最后一个位置出现
+                      if(self.type=="send")then
+                        s2:=s2+")("+"Dstrict (De "+self.name+")"
+                      else
+                        s2:=s2+"(De "+self.name+")"
+                        self.container().asType(InteractionOperand).i:=j+1//处理完一个消息所对应的两个事件，计数器加一
+                      end            
+                  else//1<j<size1
+                     if(self.type=="send")then
+                        s2:="Dstrict ("+s2+")("+"Dstrict (De "+self.name+")"
+                      else
+                        s2:=s2+"(De "+self.name+"))"
+                        self.container().asType(InteractionOperand).i:=j+1//处理完一个消息所对应的两个事件，计数器加一
+                      end
+                  end
+               end            
+       end
+       result.append(s2)  
+       
+    end
+    
+    operation dealCombineFragIntoCoq(guardList : oset GuardStruct[0..*],j:Integer,s2:String):String is do
+         if(j==1) then //位置在第一个时
+              s2:=self.asType(CombinedFragment).CombinetoCoq(guardList)
+         else //在其他位置时
+             s2:="Dstrict ("+s2+")"+"("+self.asType(CombinedFragment).CombinetoCoq(guardList)+")"
+         end
+        //处理完一个组合片段，计数器+1
+         self.container().asType(InteractionOperand).i:=j+1
+          
+        result:=s2
+    end
+    
+    operation dealCombineFragIntoCoq2(guardList : oset GuardStruct[0..*],j:Integer,s2:String,upperComFragName:String):String is do
+      if(upperComFragName=="opt")then//上层组合片段为opt，与最顶层对于事件类型的片段处理一致
+          s2:=dealCombineFragIntoCoq(guardList,j,s2)
+       else//为其他类型组合片段
+           if(j==1)then//当前事件类型的片段在上层片段的第一个位置出现
+                  s2:=self.CombinetoCoq(guardList)
+                  self.container().asType(InteractionOperand).i:=j+1
+               else 
+                  if(j==size1)then//在最后一个位置出现
+                     s2:=s2+")("+self.CombinetoCoq(guardList)
+                     stdio.writeln("Current combine upper Not OPT postion2222: "+j.toString +"  "+s2)      
+                  else 
+                     s2:="Dstrict("+s2+")("+self.CombinetoCoq(guardList)+")"
+                     self.container().asType(InteractionOperand).i:=j+1
+                  end
+              end 
+       end
+       result:=s2
+     end
+     
+     
+     //不处理，交给子类CombinedFragment去处理
+     operation CombinetoCoq(guardList : oset GuardStruct[0..*]):String is do 
+     result:=""
+     end
+     
+     //获得当前组合片段里的事件类型的fragment的size
+     operation getFragmentsSizeInCombinedFragment():Integer is do 
+       var size:Integer init result:=self.container().asType(InteractionOperand).fragments.size + self.container().asType(InteractionOperand).fragments.select{e| not (e.type=="send" or e.type=="receive")}.size   
+       result:=size/2    
+     end
+   
+     //获得最顶层的fragment的size
+     operation getFragmentSize():Integer is do 
+        //返回事件fragment的size
+         var size:Integer init self.container().asType(Interaction).fragment.size+ self.container().asType(Interaction).fragment.select{e| not (e.type=="send" or e.type=="receive")}.size
+         result:=size/2
+    end   
+   //当前fragment所在的上层组合片段的名字
+    operation getCombinedFragmentName():String is do
+       result:= self.container().asType(InteractionOperand).container().asType(CombinedFragment).interctionOperator.name     
+    end
+
+}
+
+//处理组合片段的转换
+aspect class CombinedFragment
+{
+  attribute guardFlag:Integer
+  
+  operation initializeGuardFlag(flag:Integer) is do
+  		guardFlag := flag		
+  end
+  
+  method CombinetoCoq(guardList : oset GuardStruct[0..*]):String is do
+    var guard:GuardStruct init GuardStruct.new
+  
+   if(not(getComFragGuard()==""))then
+	  guard.guardID :=  guardFlag
+	  guard.guardStr := getComFragGuard()  
+	  guardList.add(guard)
+	  result := "D" + self.interctionOperator.name+" C" + guard.guardID.toString() +" ("
+   else
+      result := "D" + self.interctionOperator.name+" ("
+   end	
+   //初始化i和s1
+    self.operand.one.initialize()
+    self.operand.one.fragments.each{e|
+         result.append(e.toCoq2(guardList))
+       }  
+         
+      result.append(")")         
+   end 
+
+  operation getComFragGuard():String is do
+     if(not self.operand.one.guard.isVoid())then
+    	//stdio.writeln(" Current Guard: " +self.operand.one.guard.specification.asType(OpaqueExpression).body)
+    	result := self.operand.one.guard.specification.asType(OpaqueExpression).body
+     else	
+      	result:= ""
+     end
+  end
+
+}
+
+
